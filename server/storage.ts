@@ -1,4 +1,6 @@
-import { User, InsertUser, Plan, InsertPlan } from "@shared/schema";
+import { users, plans, type User, type InsertUser, type Plan, type InsertPlan } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -11,68 +13,59 @@ export interface IStorage {
   deletePlan(id: number): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private plans: Map<number, Plan>;
-  private userId: number;
-  private planId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.plans = new Map();
-    this.userId = 1;
-    this.planId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByGithubId(githubId: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.githubId === githubId);
+    const [user] = await db.select().from(users).where(eq(users.githubId, githubId));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   async getPlans(userId: number): Promise<Plan[]> {
-    return Array.from(this.plans.values()).filter(plan => plan.userId === userId);
+    return db.select().from(plans).where(eq(plans.userId, userId));
   }
 
   async getPlan(id: number): Promise<Plan | undefined> {
-    return this.plans.get(id);
+    const [plan] = await db.select().from(plans).where(eq(plans.id, id));
+    return plan;
   }
 
   async createPlan(insertPlan: InsertPlan): Promise<Plan> {
-    const id = this.planId++;
-    const plan: Plan = {
-      ...insertPlan,
-      id,
-      createdAt: new Date()
-    };
-    this.plans.set(id, plan);
+    const [plan] = await db
+      .insert(plans)
+      .values(insertPlan)
+      .returning();
     return plan;
   }
 
   async updatePlan(id: number, updatePlan: Partial<InsertPlan>): Promise<Plan> {
-    const existing = await this.getPlan(id);
-    if (!existing) throw new Error("Plan not found");
-    
-    const updated: Plan = {
-      ...existing,
-      ...updatePlan,
-    };
-    this.plans.set(id, updated);
-    return updated;
+    const [plan] = await db
+      .update(plans)
+      .set(updatePlan)
+      .where(eq(plans.id, id))
+      .returning();
+
+    if (!plan) {
+      throw new Error("Plan not found");
+    }
+
+    return plan;
   }
 
   async deletePlan(id: number): Promise<void> {
-    this.plans.delete(id);
+    await db.delete(plans).where(eq(plans.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
