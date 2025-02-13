@@ -9,10 +9,15 @@ export default function Navbar() {
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        <div className="mr-4 hidden md:flex">
+      <div className="container flex h-16 items-center">
+        <div className="mr-4 md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="hidden font-bold sm:inline-block">
+            <img 
+              src="/assets/logo.png" 
+              alt="RainbowScientists" 
+              className="h-8 w-auto"
+            />
+            <span className="hidden font-bold sm:inline-block bg-gradient-to-r from-primary/90 to-primary text-transparent bg-clip-text">
               IT Infrastructure Planner
             </span>
           </Link>
